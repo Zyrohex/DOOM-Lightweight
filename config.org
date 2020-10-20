@@ -383,7 +383,7 @@ REVIEW should we define any additional tags?
 ** company mode
 #+BEGIN_SRC emacs-lisp
 (after! org
-  (set-company-backend! 'org-mode 'company-capf '(company-yasnippet company-elisp))
+  (set-company-backend! 'org-mode 'company-capf '(company-yasnippet company-org-roam company-elisp))
   (setq company-idle-delay 0.25))
 #+END_SRC
 ** DEFT
@@ -416,6 +416,39 @@ Configuring DEFT default settings
         deft-use-filename-as-title nil
         deft-markdown-mode-title-level 1
         deft-file-naming-rules '((nospace . "-"))))
+
+(defun my-deft/strip-quotes (str)
+  (cond ((string-match "\"\\(.+\\)\"" str) (match-string 1 str))
+        ((string-match "'\\(.+\\)'" str) (match-string 1 str))
+        (t str)))
+
+(defun my-deft/parse-title-from-front-matter-data (str)
+  (if (string-match "^title: \\(.+\\)" str)
+      (let* ((title-text (my-deft/strip-quotes (match-string 1 str)))
+             (is-draft (string-match "^draft: true" str)))
+        (concat (if is-draft "[DRAFT] " "") title-text))))
+
+(defun my-deft/deft-file-relative-directory (filename)
+  (file-name-directory (file-relative-name filename deft-directory)))
+
+(defun my-deft/title-prefix-from-file-name (filename)
+  (let ((reldir (my-deft/deft-file-relative-directory filename)))
+    (if reldir
+        (concat (directory-file-name reldir) " > "))))
+
+(defun my-deft/parse-title-with-directory-prepended (orig &rest args)
+  (let ((str (nth 1 args))
+        (filename (car args)))
+    (concat
+      (my-deft/title-prefix-from-file-name filename)
+      (let ((nondir (file-name-nondirectory filename)))
+        (if (or (string-prefix-p "README" nondir)
+                (string-suffix-p ".txt" filename))
+            nondir
+          (if (string-prefix-p "---\n" str)
+              (my-deft/parse-title-from-front-matter-data
+               (car (split-string (substring str 4) "\n---\n")))
+            (apply orig args)))))))
 (require 'my-deft-title)
 (advice-add 'deft-parse-title :around #'my-deft/parse-title-with-directory-prepended)
 #+END_SRC
@@ -514,6 +547,76 @@ Configuring DEFT default settings
   (helm-org-rifle-test-against-path t))
 
 (provide 'setup-helm-org-rifle)
+#+END_SRC
+** ROAM
+#+BEGIN_SRC emacs-lisp
+(defun nm/remove-lines ()
+  "Remove lines mode."
+  (display-line-numbers-mode -1))
+(remove-hook! '(org-roam-mode-hook) #'nm/remove-lines)
+
+(setq org-roam-tag-sources '(prop last-directory))
+(setq org-roam-db-location "~/.org/roam.db")
+(setq org-roam-directory "~/.org/")
+
+(setq org-roam-dailies-capture-templates
+   '(("d" "daily" plain (function org-roam-capture--get-point) ""
+      :immediate-finish t
+      :file-name "journal/%<%Y-%m-%d-%a>"
+      :head "#+TITLE: %<%Y-%m-%d %a>\n#+STARTUP: content\n\n")))
+
+(setq org-roam-capture-templates
+        '(("d" "digest" plain (function org-roam-capture--get-point)
+           "%?"
+           :file-name "notes/digest/%<%Y%m%d%H%M>-${slug}"
+           :head "#+title: ${title}\n#+roam_tags: %^{roam_tags}\n\nsource :: [[%^{link}][%^{link_desc}]]\n\n"
+           :unnarrowed t)
+          ("n" "notes" plain (function org-roam-capture--get-point)
+           :file-name "notes/${slug}"
+           :head "#+title: ${title}\n#+roam_tags: %(read-string \"tags: \")\n\n"
+           :unnarrowed t
+           "%?")
+          ("p" "private" plain (function org-roam-capture--get-point)
+           :file-name "notes/private/${slug}"
+           :head "#+title: ${title}\n#+roam_tags: %(read-string \"tags: \")\n\n"
+           :unnarrowed t
+           "%?")
+          ("r" "reveal slide" plain (function org-roam-capture--get-point)
+           :file-name "slides/%<%Y%m%d%H%M>-${slug}"
+           :head "#+title: ${title}\n#+options: num:nil toc:nil\n#+REVEAL_THEME: %^{theme|black|white|league|beige|sky|night|serif|simple|solarized|blood|moon}\n#+REVEAL_PLUGINS: (highlight)\n#+REVEAL_OVERVIEW: t\n\n"
+           :unnarrow t
+           "%?")))
+#+END_SRC
+
+Export backlinks
+#+BEGIN_SRC emacs-lisp
+(defun my/org-roam--backlinks-list-with-content (file)
+  (with-temp-buffer
+    (if-let* ((backlinks (org-roam--get-backlinks file))
+              (grouped-backlinks (--group-by (nth 0 it) backlinks)))
+        (progn
+          (insert (format "\n\n* %d Backlinks\n"
+                          (length backlinks)))
+          (dolist (group grouped-backlinks)
+            (let ((file-from (car group))
+                  (bls (cdr group)))
+              (insert (format "** [[file:%s][%s]]\n"
+                              file-from
+                              (org-roam--get-title-or-slug file-from)))
+              (dolist (backlink bls)
+                (pcase-let ((`(,file-from _ ,props) backlink))
+                  (insert (s-trim (s-replace "\n" " " (plist-get props :content))))
+                  (insert "\n\n")))))))
+    (buffer-string)))
+
+(defun my/org-export-preprocessor (backend)
+  (let ((links (my/org-roam--backlinks-list-with-content (buffer-file-name))))
+    (unless (string= links "")
+      (save-excursion
+        (goto-char (point-max))
+        (insert (concat "\n* Backlinks\n") links)))))
+
+(add-hook 'org-export-before-processing-hook 'my/org-export-preprocessor)
 #+END_SRC
 ** Pandoc
 #+BEGIN_SRC emacs-lisp
