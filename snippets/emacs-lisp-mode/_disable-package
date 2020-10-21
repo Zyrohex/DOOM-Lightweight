@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: _disable-package
+# key: _disable-package
+# --
+(package! $1 :disable t)
