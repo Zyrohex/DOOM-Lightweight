@@ -29,12 +29,6 @@
       :localleader
       :desc "Filter" "f" #'org-agenda-filter)
 
-(when (equal (window-system) nil)
-  (and
-   (bind-key "C-<down>" #'+org/insert-item-below)
-   (setq doom-theme 'doom-monokai-pro)
-   (setq doom-font (font-spec :family "Input Mono" :size 20))))
-
 (setq diary-file "~/.org/diary.org")
 (setq org-directory "~/.org/")
 
@@ -52,6 +46,16 @@
   (set-popup-rule! "*Capture*" :side 'left :size .30 :select t)
   (set-popup-rule! "*CAPTURE-*" :side 'left :size .30 :select t))
 ;  (set-popup-rule! "*Org Agenda*" :side 'right :size .35 :select t))
+
+(after! org (setq org-image-actual-width (truncate (* (window-pixel-width) 0.15))
+                  org-archive-location "~/.org/gtd/archives.org::datetree"
+                  projectile-project-search-path '("~/projects/")))
+
+(when (equal (window-system) nil)
+  (and
+   (bind-key "C-<down>" #'+org/insert-item-below)
+   (setq doom-theme 'doom-monokai-pro)
+   (setq doom-font (font-spec :family "Input Mono" :size 20))))
 
 (require 'org-habit)
 (after! org (setq org-hide-emphasis-markers t
@@ -83,22 +87,10 @@
 (after! org (setq org-capture-templates
       '(("!" "Quick Capture" plain (file+headline "~/.org/gtd/next.org" "Inbox")
          "* TODO %(read-string \"Task: \")\n:PROPERTIES:\n:CREATED: %U\n:END:")
-        ("p" "New Project" plain (file nm/org-capture-file-picker)
-         (file "~/.doom.d/templates/template-projects.org"))
+        ("r" "Reference" entry (file "~/.org/gtd/refs.org")
+         "* %?")
         ("j" "Journal" entry (file "~/.org/journal.org")
-         "* <%<%Y-%m-%d %H:%M %a>> %?" :clock-in t :clock-resume t)
-        ("n" "Note on headline" plain (function nm/org-end-of-headline)
-         "%?" :empty-lines-before 1 :empty-lines-after 1 :unnarrow t)
-        ("f" "quick note to file" plain (function nm/org-capture-weeklies)
-         "%?" :empty-lines-before 1 :empty-lines-after 1)
-        ("$" "Scheduled Transactions" plain (file "~/.org/gtd/finances.ledger")
-         (file "~/.doom.d/templates/ledger-scheduled.org"))
-        ("l" "Ledger Transaction" plain (file "~/.org/gtd/finances.ledger")
-         "%(format-time-string \"%Y/%m/%d\") * %^{transaction}\n Income:%^{From Account|Checking|Card|Cash}  -%^{dollar amount}\n Expenses:%^{category}  %\\3\n" :empty-lines-before 1))))
-
-(after! org (setq org-image-actual-width nil
-                  org-archive-location "~/.org/gtd/archives.org::datetree"
-                  projectile-project-search-path '("~/projects/")))
+         "* <%<%Y-%m-%d %H:%M %a>> %?" :clock-in t :clock-resume t))))
 
 (after! org (setq org-html-head-include-scripts t
                   org-export-with-toc t
@@ -211,10 +203,10 @@
 (add-hook 'org-mode-hook 'org-indent-mode)
 (add-hook 'org-mode-hook 'auto-fill-mode)
 (add-hook 'org-mode-hook 'turn-off-auto-fill)
+(setq org-image-actual-width (truncate (* (window-pixel-width) 0.15)))
 
 (setq org-tags-column 0)
 (setq org-tag-alist '((:startgrouptag)
-                      ("Context")
                       (:grouptags)
                       ("@home" . ?h)
                       ("@computer")
@@ -226,23 +218,7 @@
                       ("@read")
                       ("@brainstorm")
                       ("@planning")
-                      (:endgrouptag)
-                      (:startgrouptag)
-                      ("Categories")
-                      (:grouptags)
-                      ("vehicles")
-                      ("health")
-                      ("house")
-                      ("hobby")
-                      ("coding")
-                      ("material")
-                      ("goal")
-                      (:endgrouptag)
-                      (:startgrouptag)
-                      ("Section")
-                      (:grouptags)
-                      ("#coding")
-                      ("#research")))
+                      (:endgrouptag)))
 
 (global-auto-revert-mode 1)
 (setq undo-limit 80000000
@@ -278,7 +254,7 @@
   (add-hook 'projectile-after-switch-project-hook 'zyro/deft-update-directory)
   (add-hook 'projectile-after-switch-project-hook 'deft-refresh))
 
-(load! "my-deft-title.el")
+;;(load! "my-deft-title.el")
 (use-package deft
   :bind (("<f8>" . deft))
   :commands (deft deft-open-file deft-new-file-named)
@@ -325,7 +301,6 @@
               (my-deft/parse-title-from-front-matter-data
                (car (split-string (substring str 4) "\n---\n")))
             (apply orig args)))))))
-(require 'my-deft-title)
 (advice-add 'deft-parse-title :around #'my-deft/parse-title-with-directory-prepended)
 
 (use-package helm-org-rifle

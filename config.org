@@ -20,20 +20,18 @@ These are some items that are required outside of the normal DOOM EMACS installa
 1. *SQLITE3 Installation*: You will need to install sqlite3, typicalled installed via your package manager as ~sudo apt install sqlite3~
 2. For fonts please download [[https://input.fontbureau.com/download/][Input]], [[http://sourceforge.net/projects/dejavu/files/dejavu/2.37/dejavu-fonts-ttf-2.37.tar.bz2][DejaVu]] and [[https://github.com/tonsky/FiraCode][FiraCode]]
 * Default Settings
-In this section we are going to cover all the basics, and then tangle the results into =config.el=
-* User Information
-Environment settings, which are specific to the user and system. First up are user settings.
+Specify user settings:
 #+BEGIN_SRC emacs-lisp
 (setq user-full-name "Nick Martin"
       user-mail-address "nmartin84@gmail.com")
 #+END_SRC
-* Misc Settings
+
 Now we load some default settings for EMACS.
 #+BEGIN_SRC emacs-lisp
 (display-time-mode 1)
 (setq display-time-day-and-date t)
 #+END_SRC
-* Key Bindings
+
 From here we load some extra key bindings that I use often
 #+BEGIN_SRC emacs-lisp
 (bind-key "<f6>" #'link-hint-copy-link)
@@ -62,23 +60,14 @@ From here we load some extra key bindings that I use often
       :desc "Filter" "f" #'org-agenda-filter)
 
 #+END_SRC
-* Terminal Mode
-Set a few settings if we detect terminal mode
-#+BEGIN_SRC emacs-lisp
-(when (equal (window-system) nil)
-  (and
-   (bind-key "C-<down>" #'+org/insert-item-below)
-   (setq doom-theme 'doom-monokai-pro)
-   (setq doom-font (font-spec :family "Input Mono" :size 20))))
-#+END_SRC
-* Default folder(s) and file(s)
+
 Then we will define some default files. I'm probably going to use default task files for inbox/someday/todo at some point so expect this to change. Also note, all customer functions will start with a =+= to distinguish from major symbols.
 #+BEGIN_SRC emacs-lisp
 (setq diary-file "~/.org/diary.org")
 (setq org-directory "~/.org/")
 #+END_SRC
 
-* Setup Layout by Monitor Profile
+Setup Layout by Monitor Profile
 #+BEGIN_SRC emacs-lisp
 (when (equal system-type 'gnu/linux)
   (setq doom-font (font-spec :family "Anonymous Pro" :size 18)
@@ -94,6 +83,22 @@ Then we will define some default files. I'm probably going to use default task f
   (set-popup-rule! "*Capture*" :side 'left :size .30 :select t)
   (set-popup-rule! "*CAPTURE-*" :side 'left :size .30 :select t))
 ;  (set-popup-rule! "*Org Agenda*" :side 'right :size .35 :select t))
+#+END_SRC
+
+Directory settings
+#+BEGIN_SRC emacs-lisp
+(after! org (setq org-image-actual-width (truncate (* (window-pixel-width) 0.15))
+                  org-archive-location "~/.org/gtd/archives.org::datetree"
+                  projectile-project-search-path '("~/projects/")))
+#+END_SRC
+* Terminal Mode
+Set a few settings if we detect terminal mode
+#+BEGIN_SRC emacs-lisp
+(when (equal (window-system) nil)
+  (and
+   (bind-key "C-<down>" #'+org/insert-item-below)
+   (setq doom-theme 'doom-monokai-pro)
+   (setq doom-font (font-spec :family "Input Mono" :size 20))))
 #+END_SRC
 * Org mode settings
 First I like to add some extra fancy stuff to make orgmode more appealing when i'm using =+pretty= flag.
@@ -143,18 +148,10 @@ Here we setup the capture templates we want for ~org-capture~. I use a file temp
 (after! org (setq org-capture-templates
       '(("!" "Quick Capture" plain (file+headline "~/.org/gtd/next.org" "Inbox")
          "* TODO %(read-string \"Task: \")\n:PROPERTIES:\n:CREATED: %U\n:END:")
-        ("p" "New Project" plain (file nm/org-capture-file-picker)
-         (file "~/.doom.d/templates/template-projects.org"))
+        ("r" "Reference" entry (file "~/.org/gtd/refs.org")
+         "* %?")
         ("j" "Journal" entry (file "~/.org/journal.org")
-         "* <%<%Y-%m-%d %H:%M %a>> %?" :clock-in t :clock-resume t)
-        ("n" "Note on headline" plain (function nm/org-end-of-headline)
-         "%?" :empty-lines-before 1 :empty-lines-after 1 :unnarrow t)
-        ("f" "quick note to file" plain (function nm/org-capture-weeklies)
-         "%?" :empty-lines-before 1 :empty-lines-after 1)
-        ("$" "Scheduled Transactions" plain (file "~/.org/gtd/finances.ledger")
-         (file "~/.doom.d/templates/ledger-scheduled.org"))
-        ("l" "Ledger Transaction" plain (file "~/.org/gtd/finances.ledger")
-         "%(format-time-string \"%Y/%m/%d\") * %^{transaction}\n Income:%^{From Account|Checking|Card|Cash}  -%^{dollar amount}\n Expenses:%^{category}  %\\3\n" :empty-lines-before 1))))
+         "* <%<%Y-%m-%d %H:%M %a>> %?" :clock-in t :clock-resume t))))
 #+END_SRC
 
 Example ledger template file: = ~/.doom.d/templates/ledger-scheduled.org~
@@ -164,13 +161,6 @@ Example ledger template file: = ~/.doom.d/templates/ledger-scheduled.org~
     Expenses:Insurance                         dollar amount
 #+END_EXAMPLE
 
-* Directory settings
-TODO add function to set image-width to *80%* of the window size.
-#+BEGIN_SRC emacs-lisp
-(after! org (setq org-image-actual-width nil
-                  org-archive-location "~/.org/gtd/archives.org::datetree"
-                  projectile-project-search-path '("~/projects/")))
-#+END_SRC
 * Export Settings
 #+BEGIN_SRC emacs-lisp
 (after! org (setq org-html-head-include-scripts t
@@ -318,13 +308,13 @@ TODO tweak refiling settings to match new GTD setup
 (add-hook 'org-mode-hook 'org-indent-mode)
 (add-hook 'org-mode-hook 'auto-fill-mode)
 (add-hook 'org-mode-hook 'turn-off-auto-fill)
+(setq org-image-actual-width (truncate (* (window-pixel-width) 0.15)))
 #+END_SRC
 * Default Tags
 REVIEW should we define any additional tags?
 #+BEGIN_SRC emacs-lisp
 (setq org-tags-column 0)
 (setq org-tag-alist '((:startgrouptag)
-                      ("Context")
                       (:grouptags)
                       ("@home" . ?h)
                       ("@computer")
@@ -336,23 +326,7 @@ REVIEW should we define any additional tags?
                       ("@read")
                       ("@brainstorm")
                       ("@planning")
-                      (:endgrouptag)
-                      (:startgrouptag)
-                      ("Categories")
-                      (:grouptags)
-                      ("vehicles")
-                      ("health")
-                      ("house")
-                      ("hobby")
-                      ("coding")
-                      ("material")
-                      ("goal")
-                      (:endgrouptag)
-                      (:startgrouptag)
-                      ("Section")
-                      (:grouptags)
-                      ("#coding")
-                      ("#research")))
+                      (:endgrouptag)))
 #+END_SRC
 * Buffer Settings
 #+BEGIN_SRC emacs-lisp
@@ -402,7 +376,7 @@ When this variable is set to ~t~ your deft directory will be updated to your pro
 
 Configuring DEFT default settings
 #+BEGIN_SRC emacs-lisp
-(load! "my-deft-title.el")
+;;(load! "my-deft-title.el")
 (use-package deft
   :bind (("<f8>" . deft))
   :commands (deft deft-open-file deft-new-file-named)
@@ -449,7 +423,6 @@ Configuring DEFT default settings
               (my-deft/parse-title-from-front-matter-data
                (car (split-string (substring str 4) "\n---\n")))
             (apply orig args)))))))
-(require 'my-deft-title)
 (advice-add 'deft-parse-title :around #'my-deft/parse-title-with-directory-prepended)
 #+END_SRC
 ** Org-Rifle

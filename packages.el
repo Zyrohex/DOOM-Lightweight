@@ -6,6 +6,7 @@
 ;; Orgmode Packages
 (package! org-edna)
 ;; Misc Packages
+(package! ob-mermaid)
 (package! ox-reveal)
 (package! ox-twbs)
 (package! deadgrep)
