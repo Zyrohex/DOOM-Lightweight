@@ -47,7 +47,7 @@
   (set-popup-rule! "*CAPTURE-*" :side 'left :size .30 :select t))
 ;  (set-popup-rule! "*Org Agenda*" :side 'right :size .35 :select t))
 
-(after! org (setq org-image-actual-width (truncate (* (window-pixel-width) 0.15))
+(after! org (setq org-image-actual-width (truncate (* (display-pixel-width) 0.15))
                   org-archive-location "~/.org/gtd/archives.org::datetree"
                   projectile-project-search-path '("~/projects/")))
 
@@ -85,12 +85,16 @@
 (after! org (setq org-clock-continuously t))
 
 (after! org (setq org-capture-templates
-      '(("!" "Quick Capture" plain (file+headline "~/.org/gtd/next.org" "Inbox")
+      '(("!" "Quick Capture" entry (file+headline "~/.org/gtd/next.org" "Inbox")
          "* TODO %(read-string \"Task: \")\n:PROPERTIES:\n:CREATED: %U\n:END:")
         ("r" "Reference" entry (file "~/.org/gtd/refs.org")
          "* %?")
-        ("j" "Journal" entry (file "~/.org/journal.org")
-         "* <%<%Y-%m-%d %H:%M %a>> %?" :clock-in t :clock-resume t))))
+        ("c" "Journal w/clock" entry (file+datetree "~/.org/gtd/journal.org")
+         "* %? %^G\n:PROPERTIES:\n:CREATED: %T\n:END:" :clock-in t :clock-keep t)
+        ("j" "Journal" entry (file+datetree "~/.org/gtd/journal.org")
+         "* %? %^G\n:PROPERTIES:\n:CREATED: %T\n:END:")
+        ("l" "Journal w/link" entry (file+datetree "~/.org/gtd/journal.org")
+         "* %?\n:PROPERTIES:\n:CREATED: %T\n:CATEGORY: digest\n:END:\n-----\nsource - %^L"))))
 
 (after! org (setq org-html-head-include-scripts t
                   org-export-with-toc t
@@ -203,7 +207,7 @@
 (add-hook 'org-mode-hook 'org-indent-mode)
 (add-hook 'org-mode-hook 'auto-fill-mode)
 (add-hook 'org-mode-hook 'turn-off-auto-fill)
-(setq org-image-actual-width (truncate (* (window-pixel-width) 0.15)))
+(setq org-image-actual-width (truncate (* (display-pixel-width) 0.15)))
 
 (setq org-tags-column 0)
 (setq org-tag-alist '((:startgrouptag)
@@ -397,70 +401,70 @@
 
 (provide 'setup-helm-org-rifle)
 
-(defun nm/remove-lines ()
-  "Remove lines mode."
-  (display-line-numbers-mode -1))
-(remove-hook! '(org-roam-mode-hook) #'nm/remove-lines)
+;; (defun nm/remove-lines ()
+;;   "Remove lines mode."
+;;   (display-line-numbers-mode -1))
+;; (remove-hook! '(org-roam-mode-hook) #'nm/remove-lines)
 
-(setq org-roam-tag-sources '(prop last-directory))
-(setq org-roam-db-location "~/.org/roam.db")
-(setq org-roam-directory "~/.org/")
+;; (setq org-roam-tag-sources '(prop last-directory))
+;; (setq org-roam-db-location "~/.org/roam.db")
+;; (setq org-roam-directory "~/.org/")
 
-(setq org-roam-dailies-capture-templates
-   '(("d" "daily" plain (function org-roam-capture--get-point) ""
-      :immediate-finish t
-      :file-name "journal/%<%Y-%m-%d-%a>"
-      :head "#+TITLE: %<%Y-%m-%d %a>\n#+STARTUP: content\n\n")))
+;; (setq org-roam-dailies-capture-templates
+;;    '(("d" "daily" plain (function org-roam-capture--get-point) ""
+;;       :immediate-finish t
+;;       :file-name "journal/%<%Y-%m-%d-%a>"
+;;       :head "#+TITLE: %<%Y-%m-%d %a>\n#+STARTUP: content\n\n")))
 
-(setq org-roam-capture-templates
-        '(("d" "digest" plain (function org-roam-capture--get-point)
-           "%?"
-           :file-name "notes/digest/%<%Y%m%d%H%M>-${slug}"
-           :head "#+title: ${title}\n#+roam_tags: %^{roam_tags}\n\nsource :: [[%^{link}][%^{link_desc}]]\n\n"
-           :unnarrowed t)
-          ("n" "notes" plain (function org-roam-capture--get-point)
-           :file-name "notes/${slug}"
-           :head "#+title: ${title}\n#+roam_tags: %(read-string \"tags: \")\n\n"
-           :unnarrowed t
-           "%?")
-          ("p" "private" plain (function org-roam-capture--get-point)
-           :file-name "notes/private/${slug}"
-           :head "#+title: ${title}\n#+roam_tags: %(read-string \"tags: \")\n\n"
-           :unnarrowed t
-           "%?")
-          ("r" "reveal slide" plain (function org-roam-capture--get-point)
-           :file-name "slides/%<%Y%m%d%H%M>-${slug}"
-           :head "#+title: ${title}\n#+options: num:nil toc:nil\n#+REVEAL_THEME: %^{theme|black|white|league|beige|sky|night|serif|simple|solarized|blood|moon}\n#+REVEAL_PLUGINS: (highlight)\n#+REVEAL_OVERVIEW: t\n\n"
-           :unnarrow t
-           "%?")))
+;; (setq org-roam-capture-templates
+;;         '(("d" "digest" plain (function org-roam-capture--get-point)
+;;            "%?"
+;;            :file-name "notes/digest/%<%Y%m%d%H%M>-${slug}"
+;;            :head "#+title: ${title}\n#+roam_tags: %^{roam_tags}\n\nsource :: [[%^{link}][%^{link_desc}]]\n\n"
+;;            :unnarrowed t)
+;;           ("n" "notes" plain (function org-roam-capture--get-point)
+;;            :file-name "notes/${slug}"
+;;            :head "#+title: ${title}\n#+roam_tags: %(read-string \"tags: \")\n\n"
+;;            :unnarrowed t
+;;            "%?")
+;;           ("p" "private" plain (function org-roam-capture--get-point)
+;;            :file-name "notes/private/${slug}"
+;;            :head "#+title: ${title}\n#+roam_tags: %(read-string \"tags: \")\n\n"
+;;            :unnarrowed t
+;;            "%?")
+;;           ("r" "reveal slide" plain (function org-roam-capture--get-point)
+;;            :file-name "slides/%<%Y%m%d%H%M>-${slug}"
+;;            :head "#+title: ${title}\n#+options: num:nil toc:nil\n#+REVEAL_THEME: %^{theme|black|white|league|beige|sky|night|serif|simple|solarized|blood|moon}\n#+REVEAL_PLUGINS: (highlight)\n#+REVEAL_OVERVIEW: t\n\n"
+;;            :unnarrow t
+;;            "%?")))
 
-(defun my/org-roam--backlinks-list-with-content (file)
-  (with-temp-buffer
-    (if-let* ((backlinks (org-roam--get-backlinks file))
-              (grouped-backlinks (--group-by (nth 0 it) backlinks)))
-        (progn
-          (insert (format "\n\n* %d Backlinks\n"
-                          (length backlinks)))
-          (dolist (group grouped-backlinks)
-            (let ((file-from (car group))
-                  (bls (cdr group)))
-              (insert (format "** [[file:%s][%s]]\n"
-                              file-from
-                              (org-roam--get-title-or-slug file-from)))
-              (dolist (backlink bls)
-                (pcase-let ((`(,file-from _ ,props) backlink))
-                  (insert (s-trim (s-replace "\n" " " (plist-get props :content))))
-                  (insert "\n\n")))))))
-    (buffer-string)))
+;; (defun my/org-roam--backlinks-list-with-content (file)
+;;   (with-temp-buffer
+;;     (if-let* ((backlinks (org-roam--get-backlinks file))
+;;               (grouped-backlinks (--group-by (nth 0 it) backlinks)))
+;;         (progn
+;;           (insert (format "\n\n* %d Backlinks\n"
+;;                           (length backlinks)))
+;;           (dolist (group grouped-backlinks)
+;;             (let ((file-from (car group))
+;;                   (bls (cdr group)))
+;;               (insert (format "** [[file:%s][%s]]\n"
+;;                               file-from
+;;                               (org-roam--get-title-or-slug file-from)))
+;;               (dolist (backlink bls)
+;;                 (pcase-let ((`(,file-from _ ,props) backlink))
+;;                   (insert (s-trim (s-replace "\n" " " (plist-get props :content))))
+;;                   (insert "\n\n")))))))
+;;     (buffer-string)))
 
-(defun my/org-export-preprocessor (backend)
-  (let ((links (my/org-roam--backlinks-list-with-content (buffer-file-name))))
-    (unless (string= links "")
-      (save-excursion
-        (goto-char (point-max))
-        (insert (concat "\n* Backlinks\n") links)))))
+;; (defun my/org-export-preprocessor (backend)
+;;   (let ((links (my/org-roam--backlinks-list-with-content (buffer-file-name))))
+;;     (unless (string= links "")
+;;       (save-excursion
+;;         (goto-char (point-max))
+;;         (insert (concat "\n* Backlinks\n") links)))))
 
-(add-hook 'org-export-before-processing-hook 'my/org-export-preprocessor)
+;; (add-hook 'org-export-before-processing-hook 'my/org-export-preprocessor)
 
 (setq org-pandoc-options '((standalone . t) (self-contained . t)))
 
@@ -644,9 +648,9 @@
   (interactive)
   (save-excursion
     (org-back-to-heading)
-    (when (save-excursion (and (bh/is-task-p) (or (and (nm/exist-context-tag-p) (not (equal (org-get-todo-state) "DONE"))) (and (nm/checkbox-active-exist-p) (nm/checkbox-done-exist-p)) (nm/checkbox-active-exist-p))))
+    (when (save-excursion (and (bh/is-task-p) (or (and (nm/exist-context-tag-p) (not (equal (org-get-todo-state) "DONE"))) (and (nm/checkbox-active-exist-p) (nm/checkbox-done-exist-p)) (nm/checkbox-active-exist-p) (nm/is-scheduled-p))))
       (org-todo "NEXT"))
-    (when (and (not (equal (org-get-todo-state) "DONE")) (null (nm/exist-context-tag-p)) (bh/is-task-p) (not (nm/checkbox-done-exist-p)) (not (nm/checkbox-active-exist-p)))
+    (when (and (not (equal (org-get-todo-state) "DONE")) (not (nm/is-scheduled-p)) (null (nm/exist-context-tag-p)) (bh/is-task-p) (not (nm/checkbox-done-exist-p)) (not (nm/checkbox-active-exist-p)))
       (org-todo "TODO"))
     (when (and (bh/is-task-p) (not (nm/checkbox-active-exist-p)) (nm/checkbox-done-exist-p))
       (org-todo "DONE"))))
@@ -703,6 +707,13 @@
   (goto-char (org-entry-beginning-position))
   (let ((end (save-excursion (line-end-position))))
     (re-search-forward nm/context-tags end t)))
+
+(defun nm/is-scheduled-p ()
+  "Checks task for SCHEDULE and if found, return t."
+  (save-excursion
+    (org-back-to-heading)
+    (let ((end (save-excursion (outline-end-of-heading))))
+      (re-search-forward org-scheduled-regexp end t))))
 
 (add-hook 'before-save-hook #'nm/update-task-states)
 
@@ -769,6 +780,7 @@
   (doom/reload-font))
 
 ;(after! org (toggle-frame-maximized)
+(load-theme 'chocolate)
 (defun nm/adjust-frame-size ()
   "set frame size accordingly."
   (set-frame-size (selected-frame) 130 65))
