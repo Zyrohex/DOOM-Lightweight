@@ -1,5 +1,8 @@
 ;; Alphapapa packages
 (package! helm-org-rifle)
+(package! org-ql)
+(package! org-multi-wiki)
+(package! helm-org-multi-wiki)
 (package! org-web-tools)
 ;; Themes
 (package! chocolate-theme)
