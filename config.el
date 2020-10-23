@@ -14,10 +14,11 @@
       :desc "Move right window" "<right>" #'evil-window-right
       :prefix ("s" . "+search")
       :desc "Outline" "o" #'counsel-outline
+      :desc "Rifle agenda-files" "a" #'helm-org-ql-agenda-files 
+      :desc "Rifle org-directory" "c" #'helm-org-ql-org-directory
       :desc "Counsel ripgrep" "d" #'counsel-rg
       :desc "Swiper All" "@" #'swiper-all
       :desc "Rifle Buffer" "b" #'helm-org-rifle-current-buffer
-      :desc "Rifle Agenda Files" "a" #'helm-org-rifle-agenda-files
       :desc "Rifle Project Files" "#" #'helm-org-rifle-project-files
       :desc "Rifle Other Project(s)" "$" #'helm-org-rifle-other-files
       :prefix ("l" . "+links")
@@ -36,8 +37,8 @@
   (setq doom-font (font-spec :family "Anonymous Pro" :size 18)
         doom-big-font (font-spec :family "Anonymous Pro" :size 26)))
 (when (equal system-type 'windows-nt)
-  (setq doom-font (font-spec :family "IBM Plex Mono" :size 18)
-        doom-big-font (font-spec :family "IBM Plex Mono" :size 22)))
+  (setq doom-font (font-spec :family "Roboto Mono" :size 18)
+        doom-big-font (font-spec :family "Roboto Mono" :size 22)))
 
 ; TODO Re-write new function for popup profile setup.
 (after! org (set-popup-rule! "^\\*lsp-help" :side 'bottom :size .30 :select t)
@@ -70,7 +71,7 @@
 (after! org (setq org-agenda-diary-file "~/.org/diary.org"
                   org-agenda-dim-blocked-tasks t
                   org-agenda-use-time-grid t
-                  org-agenda-hide-tags-regexp "\\w+"
+;                  org-agenda-hide-tags-regexp "\\w+"
                   org-agenda-compact-blocks nil
                   org-agenda-block-separator ""
                   org-agenda-skip-scheduled-if-done t
@@ -205,11 +206,11 @@
                   org-startup-folded 'content
                   org-src-tab-acts-natively t))
 (add-hook 'org-mode-hook 'org-indent-mode)
-(add-hook 'org-mode-hook 'auto-fill-mode)
+;(add-hook 'org-mode-hook 'auto-fill-mode)
 (add-hook 'org-mode-hook 'turn-off-auto-fill)
 (setq org-image-actual-width (truncate (* (display-pixel-width) 0.15)))
 
-(setq org-tags-column 0)
+(setq org-tags-column 80)
 (setq org-tag-alist '((:startgrouptag)
                       (:grouptags)
                       ("@home" . ?h)
@@ -222,6 +223,8 @@
                       ("@read")
                       ("@brainstorm")
                       ("@planning")
+                      ("SOMEDAY")
+                      ("WAITING")
                       (:endgrouptag)))
 
 (global-auto-revert-mode 1)
@@ -401,6 +404,17 @@
 
 (provide 'setup-helm-org-rifle)
 
+(use-package org-multi-wiki
+  :config
+  (org-multi-wiki-global-mode 1)
+  :custom
+  (org-multi-wiki-namespace-list '((getting-things-done "~/.org/gtd/")
+                                   (notes "~/.org/notes/")))
+  ;; Namespace of a wiki
+  (org-multi-wiki-default-namespace 'gtd))
+
+(use-package helm-org-multi-wiki)
+
 ;; (defun nm/remove-lines ()
 ;;   "Remove lines mode."
 ;;   (display-line-numbers-mode -1))
@@ -481,7 +495,7 @@
                 (org-agenda-sorting-strategy
                  '(todo-state-down effort-up category-keep))))
               ("i" "Inbox"
-               ((tags "REFILE"
+               ((tags-todo "-SOMEDAY/TODO"
                       ((org-agenda-overriding-header "Tasks to Refile")
                        (org-tags-match-list-sublevels nil)))))
               ("w" "Master Agenda"
@@ -505,7 +519,7 @@
                                                                   (if bh/hide-scheduled-and-waiting-next-tasks
                                                                       ""
                                                                     " (including WAITING and SCHEDULED tasks)")))
-                            (org-agenda-skip-function 'bh/skip-projects-and-habits-and-single-tasks)
+                            (org-agenda-skip-function 'nm/skip-projects-and-habits-and-single-tasks)
                             (org-tags-match-list-sublevels t)
                             (org-agenda-todo-ignore-scheduled bh/hide-scheduled-and-waiting-next-tasks)
                             (org-agenda-todo-ignore-deadlines bh/hide-scheduled-and-waiting-next-tasks)
@@ -523,23 +537,23 @@
                             (org-agenda-todo-ignore-with-date bh/hide-scheduled-and-waiting-next-tasks)
                             (org-agenda-sorting-strategy
                              '(category-keep))))
-                (tags-todo "-SOMEDAY-REFILE-CANCELLED-#waiting-#hold-#monitor/!"
+                (tags-todo "-SOMEDAY-REFILE-CANCELLED-/NEXT"
                            ((org-agenda-overriding-header (concat "Standalone Tasks"
                                                                   (if bh/hide-scheduled-and-waiting-next-tasks
                                                                       ""
                                                                     " (including WAITING and SCHEDULED tasks)")))
-                            (org-agenda-skip-function 'bh/skip-project-tasks)
+                            (org-agenda-skip-function 'nm/skip-project-tasks)
                             (org-agenda-todo-ignore-scheduled t)
                             (org-agenda-todo-ignore-deadlines t)
                             (org-agenda-todo-ignore-with-date t)
                             (org-agenda-sorting-strategy
                              '(category-keep))))
-                (tags-todo "-CANCELLED+#waiting|#hold|#monitor/"
+                (tags-todo "SOMEDAY/"
                            ((org-agenda-overriding-header (concat "Waiting and Postponed Tasks"
                                                                   (if bh/hide-scheduled-and-waiting-next-tasks
                                                                       ""
                                                                     " (including WAITING and SCHEDULED tasks)")))
-                            (org-agenda-skip-function 'bh/skip-non-tasks)
+                            (org-agenda-skip-function 'nm/skip-scheduled)
                             (org-tags-match-list-sublevels nil)
                             (org-agenda-todo-ignore-scheduled bh/hide-scheduled-and-waiting-next-tasks)
                             (org-agenda-todo-ignore-deadlines bh/hide-scheduled-and-waiting-next-tasks)))
@@ -712,8 +726,42 @@
   "Checks task for SCHEDULE and if found, return t."
   (save-excursion
     (org-back-to-heading)
-    (let ((end (save-excursion (outline-end-of-heading))))
+    (let ((end (save-excursion (org-end-of-subtree t))))
       (re-search-forward org-scheduled-regexp end t))))
+
+(defun nm/skip-project-tasks ()
+  "Show non-project tasks.
+Skip project and sub-project tasks, habits, and project related tasks."
+  (save-restriction
+    (widen)
+    (let* ((subtree-end (save-excursion (org-end-of-subtree t))))
+      (cond
+       ((bh/is-project-p) subtree-end)
+       ((oh/is-scheduled-p) subtree-end)
+       ((org-is-habit-p) subtree-end)
+       ((bh/is-project-subtree-p) subtree-end)
+       (t nil)))))
+
+(defun nm/skip-projects-and-habits-and-single-tasks ()
+  "Skip trees that are projects, tasks that are habits, single non-project tasks"
+  (save-restriction
+    (widen)
+    (let ((next-headline (save-excursion (or (outline-next-heading) (point-max)))))
+      (cond
+       ((org-is-habit-p) next-headline)
+       ((nm/is-scheduled-p) next-headline)
+       ((bh/is-project-p) next-headline)
+       ((and (bh/is-task-p) (not (bh/is-project-subtree-p))) next-headline)
+       (t nil)))))
+
+(defun nm/skip-scheduled ()
+  "Skip headlines that are scheduled."
+  (save-restriction
+    (widen)
+    (let ((next-headline (save-excursion (or (outline-next-heading) (point-max)))))
+      (cond
+       ((nm/is-scheduled-p) next-headline)
+       (t nil)))))
 
 (add-hook 'before-save-hook #'nm/update-task-states)
 
@@ -780,7 +828,7 @@
   (doom/reload-font))
 
 ;(after! org (toggle-frame-maximized)
-(load-theme 'chocolate)
+(load-theme 'doom-horizon)
 (defun nm/adjust-frame-size ()
   "set frame size accordingly."
   (set-frame-size (selected-frame) 130 65))
